@@ -1,5 +1,8 @@
 # Quiz Type (TypeScript + PostgreSQL + Docker)
 
+Integrantes: Henrique Gabriel Cesaroni // 2502407
+             João Lucas Frangiotti // 2501625
+
 Aplicação simples de Quiz desenvolvida em TypeScript com Express e PostgreSQL.
 Ela permite cadastrar perguntas (com múltiplas respostas, indicando a correta), executar quizzes para usuários e armazenar a pontuação.
 
