@@ -254,7 +254,3 @@ docker stop postgres-quiz; docker rm postgres-quiz
 - Interface com histórico de partidas
 - Exportar ranking para CSV
 - Deploy com Docker (containerizar também a API)
-
-## Licença
-
-MIT
