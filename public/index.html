@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quiz Type</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f0f2f5;
+        }
+
+        .container {
+            background-color: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        h1, h2 {
+            color: #1a73e8;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+
+        input[type="text"],
+        textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #1a73e8;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #1557b0;
+        }
+
+        .quiz-question {
+            margin-bottom: 20px;
+            padding: 15px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .answer-option {
+            margin: 10px 0;
+        }
+
+        .ranking-item {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .ranking-item:last-child {
+            border-bottom: none;
+        }
+
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            gap: 10px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background-color: #e8f0fe;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .tab.active {
+            background-color: #1a73e8;
+            color: white;
+        }
+
+        #message {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+        }
+
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+        }
+    </style>
+</head>
+<body>
+    <h1>Quiz Type</h1>
+    
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('play')">Jogar Quiz</button>
+        <button class="tab" onclick="showTab('create')">Criar Pergunta</button>
+        <button class="tab" onclick="showTab('ranking')">Ranking</button>
+    </div>
+
+    <div id="message" style="display: none;"></div>
+
+    <!-- Seção de Jogar -->
+    <div id="play" class="container">
+        <h2>Jogar Quiz</h2>
+        <div class="form-group">
+            <label for="playerName">Seu Nome:</label>
+            <input type="text" id="playerName" required>
+        </div>
+        <button onclick="startQuiz()">Começar Quiz</button>
+        <div id="quiz-questions"></div>
+        <button onclick="submitQuiz()" style="display: none;" id="submit-quiz">Enviar Respostas</button>
+    </div>
+
+    <!-- Seção de Criar Pergunta -->
+    <div id="create" class="container" style="display: none;">
+        <h2>Criar Nova Pergunta</h2>
+        <div class="form-group">
+            <label for="questionText">Pergunta:</label>
+            <textarea id="questionText" rows="3" required></textarea>
+        </div>
+        <div class="form-group">
+            <label for="points">Pontos:</label>
+            <input type="number" id="points" value="1" min="1" required>
+        </div>
+        <div class="form-group">
+            <label>Respostas:</label>
+            <div id="answers">
+                <div class="answer-input">
+                    <input type="text" placeholder="Resposta 1" required>
+                    <input type="checkbox"> Correta
+                </div>
+                <div class="answer-input">
+                    <input type="text" placeholder="Resposta 2" required>
+                    <input type="checkbox"> Correta
+                </div>
+            </div>
+        </div>
+        <button onclick="addAnswer()">+ Adicionar Resposta</button>
+        <button onclick="createQuestion()">Salvar Pergunta</button>
+    </div>
+
+    <!-- Seção de Ranking -->
+    <div id="ranking" class="container" style="display: none;">
+        <h2>Ranking</h2>
+        <div id="ranking-list"></div>
+    </div>
+
+    <script>
+        let currentQuestions = [];
+        let userAnswers = [];
+
+        function showTab(tabId) {
+            document.querySelectorAll('.container').forEach(cont => cont.style.display = 'none');
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            document.getElementById(tabId).style.display = 'block';
+            event.target.classList.add('active');
+            
+            if (tabId === 'ranking') {
+                loadRanking();
+            }
+        }
+
+        function showMessage(text, type) {
+            const messageDiv = document.getElementById('message');
+            messageDiv.textContent = text;
+            messageDiv.className = type;
+            messageDiv.style.display = 'block';
+            setTimeout(() => {
+                messageDiv.style.display = 'none';
+            }, 3000);
+        }
+
+        async function startQuiz() {
+            const playerName = document.getElementById('playerName').value;
+            if (!playerName) {
+                showMessage('Por favor, digite seu nome', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/questions/quiz');
+                currentQuestions = await response.json();
+                displayQuestions(currentQuestions);
+                document.getElementById('submit-quiz').style.display = 'block';
+            } catch (error) {
+                showMessage('Erro ao carregar as perguntas', 'error');
+            }
+        }
+
+        function displayQuestions(questions) {
+            const container = document.getElementById('quiz-questions');
+            container.innerHTML = '';
+            
+            questions.forEach((question, index) => {
+                const questionDiv = document.createElement('div');
+                questionDiv.className = 'quiz-question';
+                questionDiv.innerHTML = `
+                    <h3>${index + 1}. ${question.text} (${question.points} pontos)</h3>
+                    ${question.answers.map((answer, aIndex) => `
+                        <div class="answer-option">
+                            <input type="radio" name="q${question.id}" value="${answer.id}" id="q${question.id}a${aIndex}">
+                            <label for="q${question.id}a${aIndex}">${answer.text}</label>
+                        </div>
+                    `).join('')}
+                `;
+                container.appendChild(questionDiv);
+            });
+        }
+
+        async function submitQuiz() {
+            const playerName = document.getElementById('playerName').value;
+            if (!playerName) {
+                showMessage('Por favor, digite seu nome', 'error');
+                return;
+            }
+
+            const answers = [];
+            currentQuestions.forEach(question => {
+                const selectedAnswer = document.querySelector(`input[name="q${question.id}"]:checked`);
+                if (selectedAnswer) {
+                    answers.push({
+                        questionId: question.id,
+                        answerId: Number(selectedAnswer.value)
+                    });
+                }
+            });
+
+            if (answers.length === 0) {
+                showMessage('Por favor, responda pelo menos uma pergunta', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/quiz/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name: playerName, answers })
+                });
+
+                const result = await response.json();
+                showMessage(`Você ganhou ${result.gained} pontos! Total: ${result.user.score}`, 'success');
+                document.getElementById('quiz-questions').innerHTML = '';
+                document.getElementById('submit-quiz').style.display = 'none';
+                loadRanking();
+            } catch (error) {
+                showMessage('Erro ao submeter respostas', 'error');
+            }
+        }
+
+        async function createQuestion() {
+            const text = document.getElementById('questionText').value;
+            const points = Number(document.getElementById('points').value);
+            const answerInputs = document.querySelectorAll('.answer-input');
+            
+            if (!text || points < 1) {
+                showMessage('Preencha a pergunta e os pontos', 'error');
+                return;
+            }
+
+            const answers = [];
+            let hasCorrectAnswer = false;
+
+            answerInputs.forEach(div => {
+                const answerText = div.querySelector('input[type="text"]').value;
+                const isCorrect = div.querySelector('input[type="checkbox"]').checked;
+                
+                if (answerText) {
+                    answers.push({ text: answerText, is_correct: isCorrect });
+                    if (isCorrect) hasCorrectAnswer = true;
+                }
+            });
+
+            if (answers.length < 2 || !hasCorrectAnswer) {
+                showMessage('Adicione pelo menos 2 respostas e marque uma como correta', 'error');
+                return;
+            }
+
+            try {
+                const response = await fetch('http://localhost:3000/questions', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text, points, answers })
+                });
+
+                if (response.ok) {
+                    showMessage('Pergunta criada com sucesso!', 'success');
+                    document.getElementById('questionText').value = '';
+                    document.getElementById('points').value = '1';
+                    document.querySelectorAll('.answer-input').forEach(div => {
+                        div.querySelector('input[type="text"]').value = '';
+                        div.querySelector('input[type="checkbox"]').checked = false;
+                    });
+                } else {
+                    showMessage('Erro ao criar pergunta', 'error');
+                }
+            } catch (error) {
+                showMessage('Erro ao criar pergunta', 'error');
+            }
+        }
+
+        function addAnswer() {
+            const answersDiv = document.getElementById('answers');
+            const newAnswer = document.createElement('div');
+            newAnswer.className = 'answer-input';
+            newAnswer.innerHTML = `
+                <input type="text" placeholder="Nova resposta" required>
+                <input type="checkbox"> Correta
+            `;
+            answersDiv.appendChild(newAnswer);
+        }
+
+        async function loadRanking() {
+            try {
+                const response = await fetch('http://localhost:3000/users/ranking');
+                const users = await response.json();
+                
+                const rankingList = document.getElementById('ranking-list');
+                rankingList.innerHTML = users.map((user, index) => `
+                    <div class="ranking-item">
+                        <strong>#${index + 1}</strong> ${user.name} - ${user.score} pontos
+                    </div>
+                `).join('');
+            } catch (error) {
+                showMessage('Erro ao carregar ranking', 'error');
+            }
+        }
+
+        // Carrega o ranking inicialmente
+        loadRanking();
+    </script>
+</body>
+</html>
